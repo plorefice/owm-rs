@@ -1,0 +1,11 @@
+[package]
+name = "owm"
+version = "0.1.0"
+authors = ["Pietro Lorefice <pietro.lorefice@gmail.com>"]
+
+[dependencies]
+hyper = "^0.10.5"
+url = "^1.4.0"
+serde = "0.9.11"
+serde_json = "0.9.9"
+serde_derive = "0.9.11"
