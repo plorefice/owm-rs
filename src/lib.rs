@@ -89,7 +89,7 @@ impl<'a, C> WeatherHub<C>
     pub fn current(&'a self) -> CurrentWeatherQuery<'a, C> {
         CurrentWeatherQuery {
             hub: &self,
-            _builder: QueryBuilder::new("weather").appid(self.key.clone()),
+            _builder: QueryBuilder::new("weather").param("appid", self.key.clone()),
         }
     }
 }
@@ -118,7 +118,7 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
 
         let query = {
             let b = mem::replace(&mut self._builder, QueryBuilder::new(""));
-            b.q(q).build()
+            b.param("q", q).build()
         };
         self.run_query(query)
     }
@@ -128,7 +128,7 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
     pub fn by_id(mut self, id: i32) -> Result<(hyper::client::Response, WeatherInfo)> {
         let query = {
             let b = mem::replace(&mut self._builder, QueryBuilder::new(""));
-            b.id(id).build()
+            b.param("id", id.to_string()).build()
         };
         self.run_query(query)
     }
@@ -140,7 +140,7 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
                      -> Result<(hyper::client::Response, WeatherInfo)> {
         let query = {
             let b = mem::replace(&mut self._builder, QueryBuilder::new(""));
-            b.lat(lat).lon(lon).build()
+            b.param("lat", lat.to_string()).param("lon", lon.to_string()).build()
         };
         self.run_query(query)
     }
@@ -189,28 +189,8 @@ impl<'a> QueryBuilder<'a> {
         }
     }
 
-    fn appid(mut self, appid: String) -> Self {
-        self._params.push(("appid", appid));
-        self
-    }
-
-    fn q(mut self, q: String) -> Self {
-        self._params.push(("q", q));
-        self
-    }
-
-    fn id(mut self, id: i32) -> Self {
-        self._params.push(("id", id.to_string()));
-        self
-    }
-
-    fn lat(mut self, lat: f32) -> Self {
-        self._params.push(("lat", lat.to_string()));
-        self
-    }
-
-    fn lon(mut self, lon: f32) -> Self {
-        self._params.push(("lon", lon.to_string()));
+    fn param(mut self, key: &'a str, val: String) -> Self {
+        self._params.push((key, val));
         self
     }
 
