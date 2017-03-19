@@ -94,6 +94,15 @@ impl<'a, C> WeatherHub<C>
     }
 }
 
+/// Rectangle specified by geographic coordinates (latitude and longitude).
+#[derive(Debug)]
+pub struct BoundingBox {
+    pub top: f32,
+    pub bottom: f32,
+    pub left: f32,
+    pub right: f32,
+}
+
 /// Query builder for the Current Weather API.
 pub struct CurrentWeatherQuery<'a, C>
     where C: 'a
@@ -228,6 +237,19 @@ impl<'a> QueryBuilder<'a> {
             }            
         }
     }
+}
+
+/// Contains the result of an aggregate query.
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct WeatherAggregate {
+    /// HTTP status code for the request
+    pub cod: Option<i32>,
+    /// Time elapsed server-side to handle the request
+    pub calctime: Option<f32>,
+    /// Number of items in the list
+    pub cnt: Option<i32>,
+    /// List of weather info
+    pub list: Option<Vec<WeatherInfo>>,
 }
 
 /// Contains all the weather-related information.
