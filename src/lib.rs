@@ -347,18 +347,42 @@ mod tests {
 
         match resp {
             Err(_) => assert!(false),
-            Ok(_) => assert!(true),
+            Ok((_, info)) => {
+                assert_eq!(Some(10.4),
+                           info.coord
+                               .clone()
+                               .unwrap()
+                               .lon);
+                assert_eq!(Some(43.72),
+                           info.coord
+                               .clone()
+                               .unwrap()
+                               .lat);
+                assert_eq!(Some("Pisa".to_string()), info.name);
+            }
         }
     }
 
     #[test]
     fn current_by_id() {
         let hub = WeatherHub::new(hyper::Client::new(), env::var("OWM_API_KEY").unwrap());
-        let resp = hub.current().by_id(6542122);
+        let resp = hub.current().by_id(6542122); // Pisa
 
         match resp {
             Err(_) => assert!(false),
-            Ok(_) => assert!(true),
+            Ok((_, info)) => {
+                assert_eq!(Some(10.41),
+                           info.coord
+                               .clone()
+                               .unwrap()
+                               .lon);
+                assert_eq!(Some(43.71),
+                           info.coord
+                               .clone()
+                               .unwrap()
+                               .lat);
+                assert_eq!(Some("Pisa".to_string()), info.name);
+            }
         }
     }
 }
