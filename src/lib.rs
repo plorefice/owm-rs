@@ -354,7 +354,7 @@ pub struct Sys {
 /// Represents an error message sent by the API server in response to a bad request.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ErrorResponse {
-    /// HTTP error code for the requested resource
+    /// HTTP status code for the requested resource
     pub cod: Option<i32>,
     /// Human-readable error message
     pub message: Option<String>,
