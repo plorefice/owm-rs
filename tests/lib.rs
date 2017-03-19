@@ -4,7 +4,7 @@ extern crate owm;
 #[cfg(test)]
 mod tests {
     use std::env;
-    use owm::WeatherHub;
+    use owm::{WeatherHub, BoundingBox};
     use hyper;
 
     #[test]
@@ -108,6 +108,30 @@ mod tests {
                                .unwrap()
                                .lat);
                 assert_eq!(Some("Pisa".to_string()), info.name);
+            }
+        }
+    }
+
+    #[test]
+    fn current_by_bounds() {
+        let hub = WeatherHub::new(hyper::Client::new(), env::var("OWM_API_KEY").unwrap());
+        let resp = hub.current().by_bounds(&BoundingBox {
+                                                top: 43.73,
+                                                left: 10.38,
+                                                bottom: 43.7,
+                                                right: 10.42,
+                                            },
+                                           10,
+                                           false);
+
+        match resp {
+            Err(e) => {
+                println!("{:#?}", e);
+                assert!(false);
+            }
+            Ok((_, info)) => {
+                assert_eq!(Some(1), info.cnt);
+                assert_eq!(Some("Pisa".to_string()), info.list.clone().unwrap()[0].name);
             }
         }
     }
