@@ -78,10 +78,10 @@ impl<'a, C> WeatherHub<C>
 {
     /// Creates a new WeatherHub which will use the provided client to perform
     /// its requests. It also requires an OWM API key.
-    pub fn new(client: C, key: String) -> WeatherHub<C> {
+    pub fn new<S: Into<String>>(client: C, key: S) -> WeatherHub<C> {
         WeatherHub {
             client: RefCell::new(client),
-            key: key,
+            key: key.into(),
         }
     }
 
@@ -107,13 +107,13 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
 {
     /// Query current weather by passing a city name and an optional country
     /// code. See http://openweathermap.org/current#name for format information.
-    pub fn by_name(mut self,
-                   city: &str,
-                   country: Option<&str>)
-                   -> Result<(hyper::client::Response, WeatherInfo)> {
+    pub fn by_name<S: Into<String>>(mut self,
+                                    city: S,
+                                    country: Option<S>)
+                                    -> Result<(hyper::client::Response, WeatherInfo)> {
         let q = match country {
-            None => String::from(city),
-            Some(code) => format!("{},{}", city, code),
+            None => city.into(),
+            Some(code) => format!("{},{}", city.into(), code.into()),
         };
 
         let query = {
