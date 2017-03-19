@@ -355,7 +355,10 @@ mod tests {
         let resp = hub.current().by_name("Pisa", Some("IT"));
 
         match resp {
-            Err(_) => assert!(false),
+            Err(e) => {
+                println!("{:#?}", e);
+                assert!(false);
+            }
             Ok((_, info)) => {
                 assert_eq!(Some(10.4),
                            info.coord
@@ -378,7 +381,10 @@ mod tests {
         let resp = hub.current().by_id(6542122); // Pisa
 
         match resp {
-            Err(_) => assert!(false),
+            Err(e) => {
+                println!("{:#?}", e);
+                assert!(false);
+            }
             Ok((_, info)) => {
                 assert_eq!(Some(10.41),
                            info.coord
@@ -401,7 +407,10 @@ mod tests {
         let resp = hub.current().by_coords(43.71, 10.41); // Pisa
 
         match resp {
-            Err(_) => assert!(false),
+            Err(e) => {
+                println!("{:#?}", e);
+                assert!(false);
+            }
             Ok((_, info)) => {
                 assert_eq!(Some(10.41),
                            info.coord
