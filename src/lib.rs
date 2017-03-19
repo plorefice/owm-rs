@@ -162,7 +162,9 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
     }
 
     /// Does the actual API call, parses the response and handles any errors.
-    fn run_query(&self, url: String) -> Result<(hyper::client::Response, WeatherInfo)> {
+    fn run_query<D>(&self, url: String) -> Result<(hyper::client::Response, D)>
+        where D: serde::Deserialize
+    {
         let req_result = ((*self.hub.client.borrow_mut()).borrow_mut())
             .request(hyper::method::Method::Get, &url)
             .send();
