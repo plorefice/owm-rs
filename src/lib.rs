@@ -105,8 +105,7 @@ pub struct CurrentWeatherQuery<'a, C>
 impl<'a, C> CurrentWeatherQuery<'a, C>
     where C: BorrowMut<hyper::Client>
 {
-    /// Query current weather by passing a city name and an optional country
-    /// code. See http://openweathermap.org/current#name for format information.
+    /// Query current weather by passing a city name and an optional country code.
     pub fn by_name<S: Into<String>>(mut self,
                                     city: S,
                                     country: Option<S>)
