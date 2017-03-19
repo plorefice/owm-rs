@@ -205,8 +205,8 @@ impl<'a> QueryBuilder<'a> {
         }
     }
 
-    fn param(mut self, key: &'a str, val: String) -> Self {
-        self._params.push((key, val));
+    fn param<S: Into<String>>(mut self, key: &'a str, val: S) -> Self {
+        self._params.push((key, val.into()));
         self
     }
 
