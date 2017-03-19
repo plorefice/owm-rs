@@ -22,7 +22,7 @@
 //!
 //! # #[test] fn eval() {
 //! let hub = WeatherHub::new(hyper::Client::new(), "YOUR_API_KEY".to_string());
-//! let res = hub.current().by_name("London");
+//! let res = hub.current().by_name("London", Some("UK"));
 //!
 //! match res {
 //!     Err(e) => match e {
@@ -89,7 +89,7 @@ impl<'a, C> WeatherHub<C>
     pub fn current(&'a self) -> CurrentWeatherQuery<'a, C> {
         CurrentWeatherQuery {
             hub: &self,
-            _builder: QueryBuilder::new("weather").appid(self.key.as_str()),
+            _builder: QueryBuilder::new("weather").appid(self.key.clone()),
         }
     }
 }
@@ -107,10 +107,18 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
 {
     /// Query current weather by passing a city name and an optional country
     /// code. See http://openweathermap.org/current#name for format information.
-    pub fn by_name(mut self, city: &str) -> Result<(hyper::client::Response, WeatherInfo)> {
+    pub fn by_name(mut self,
+                   city: &str,
+                   country: Option<&str>)
+                   -> Result<(hyper::client::Response, WeatherInfo)> {
+        let q = match country {
+            None => String::from(city),
+            Some(code) => format!("{},{}", city, code),
+        };
+
         let query = {
             let b = mem::replace(&mut self._builder, QueryBuilder::new(""));
-            b.q(city).build()
+            b.q(q).build()
         };
         self.run_query(query)
     }
@@ -169,13 +177,13 @@ impl<'a> QueryBuilder<'a> {
         }
     }
 
-    fn appid(mut self, appid: &'a str) -> Self {
-        self._params.push(("appid", appid.to_string()));
+    fn appid(mut self, appid: String) -> Self {
+        self._params.push(("appid", appid));
         self
     }
 
-    fn q(mut self, q: &'a str) -> Self {
-        self._params.push(("q", q.to_string()));
+    fn q(mut self, q: String) -> Self {
+        self._params.push(("q", q));
         self
     }
 
@@ -343,7 +351,7 @@ mod tests {
     #[test]
     fn current_by_name() {
         let hub = WeatherHub::new(hyper::Client::new(), env::var("OWM_API_KEY").unwrap());
-        let resp = hub.current().by_name("Pisa");
+        let resp = hub.current().by_name("Pisa", Some("IT"));
 
         match resp {
             Err(_) => assert!(false),
