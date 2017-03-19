@@ -133,6 +133,18 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
         self.run_query(query)
     }
 
+    /// Query current weather by passing geographic coordinates.
+    pub fn by_coords(mut self,
+                     lat: f32,
+                     lon: f32)
+                     -> Result<(hyper::client::Response, WeatherInfo)> {
+        let query = {
+            let b = mem::replace(&mut self._builder, QueryBuilder::new(""));
+            b.lat(lat).lon(lon).build()
+        };
+        self.run_query(query)
+    }
+
     /// Does the actual API call, parses the response and handles any errors.
     fn run_query(&self, url: String) -> Result<(hyper::client::Response, WeatherInfo)> {
         let req_result = ((*self.hub.client.borrow_mut()).borrow_mut())
@@ -189,6 +201,16 @@ impl<'a> QueryBuilder<'a> {
 
     fn id(mut self, id: i32) -> Self {
         self._params.push(("id", id.to_string()));
+        self
+    }
+
+    fn lat(mut self, lat: f32) -> Self {
+        self._params.push(("lat", lat.to_string()));
+        self
+    }
+
+    fn lon(mut self, lon: f32) -> Self {
+        self._params.push(("lon", lon.to_string()));
         self
     }
 
@@ -375,6 +397,29 @@ mod tests {
     fn current_by_id() {
         let hub = WeatherHub::new(hyper::Client::new(), env::var("OWM_API_KEY").unwrap());
         let resp = hub.current().by_id(6542122); // Pisa
+
+        match resp {
+            Err(_) => assert!(false),
+            Ok((_, info)) => {
+                assert_eq!(Some(10.41),
+                           info.coord
+                               .clone()
+                               .unwrap()
+                               .lon);
+                assert_eq!(Some(43.71),
+                           info.coord
+                               .clone()
+                               .unwrap()
+                               .lat);
+                assert_eq!(Some("Pisa".to_string()), info.name);
+            }
+        }
+    }
+
+    #[test]
+    fn current_by_coords() {
+        let hub = WeatherHub::new(hyper::Client::new(), env::var("OWM_API_KEY").unwrap());
+        let resp = hub.current().by_coords(43.71, 10.41); // Pisa
 
         match resp {
             Err(_) => assert!(false),
