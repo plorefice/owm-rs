@@ -336,12 +336,13 @@ pub struct ErrorResponse {
 
 #[cfg(test)]
 mod tests {
+    use std::env;
     use hyper;
     use WeatherHub;
 
     #[test]
     fn current_by_name() {
-        let hub = WeatherHub::new(hyper::Client::new(), "API_KEY".to_string());
+        let hub = WeatherHub::new(hyper::Client::new(), env::var("OWM_API_KEY").unwrap());
         let resp = hub.current().by_name("Pisa");
 
         match resp {
@@ -352,7 +353,7 @@ mod tests {
 
     #[test]
     fn current_by_id() {
-        let hub = WeatherHub::new(hyper::Client::new(), "API_KEY".to_string());
+        let hub = WeatherHub::new(hyper::Client::new(), env::var("OWM_API_KEY").unwrap());
         let resp = hub.current().by_id(6542122);
 
         match resp {
