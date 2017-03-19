@@ -89,7 +89,7 @@ impl<'a, C> WeatherHub<C>
     pub fn current(&'a self) -> CurrentWeatherQuery<'a, C> {
         CurrentWeatherQuery {
             hub: &self,
-            _builder: QueryBuilder::new("weather").param("appid", self.key.clone()),
+            _builder: QueryBuilder::new().param("appid", self.key.clone()),
         }
     }
 }
@@ -125,8 +125,8 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
         };
 
         let query = {
-            let b = mem::replace(&mut self._builder, QueryBuilder::new(""));
-            b.param("q", q).build()
+            let b = mem::replace(&mut self._builder, QueryBuilder::new());
+            b.method("weather").param("q", q).build()
         };
         self.run_query(query)
     }
@@ -135,8 +135,8 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
     /// See http://bulk.openweathermap.org/sample/ for a list of city IDs.
     pub fn by_id(mut self, id: i32) -> Result<(hyper::client::Response, WeatherInfo)> {
         let query = {
-            let b = mem::replace(&mut self._builder, QueryBuilder::new(""));
-            b.param("id", id.to_string()).build()
+            let b = mem::replace(&mut self._builder, QueryBuilder::new());
+            b.method("weather").param("id", id.to_string()).build()
         };
         self.run_query(query)
     }
@@ -152,8 +152,8 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
         };
 
         let query = {
-            let b = mem::replace(&mut self._builder, QueryBuilder::new(""));
-            b.param("zip", q).build()
+            let b = mem::replace(&mut self._builder, QueryBuilder::new());
+            b.method("weather").param("zip", q).build()
         };
         self.run_query(query)
     }
@@ -164,8 +164,36 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
                      lon: f32)
                      -> Result<(hyper::client::Response, WeatherInfo)> {
         let query = {
-            let b = mem::replace(&mut self._builder, QueryBuilder::new(""));
-            b.param("lat", lat.to_string()).param("lon", lon.to_string()).build()
+            let b = mem::replace(&mut self._builder, QueryBuilder::new());
+            b.method("weather")
+                .param("lat", lat.to_string())
+                .param("lon", lon.to_string())
+                .build()
+        };
+        self.run_query(query)
+    }
+
+    /// Query current weather for cities within the defined rectangle specified
+    /// by the bounding box using the given zoom. Server clustering of points
+    /// can also be used.
+    pub fn by_bounds(mut self,
+                     bbox: &BoundingBox,
+                     zoom: i32,
+                     cluster: bool)
+                     -> Result<(hyper::client::Response, WeatherAggregate)> {
+        let q = format!("{},{},{},{},{}",
+                        bbox.left,
+                        bbox.bottom,
+                        bbox.right,
+                        bbox.top,
+                        zoom);
+
+        let query = {
+            let b = mem::replace(&mut self._builder, QueryBuilder::new());
+            b.method("box/city")
+                .param("bbox", q)
+                .param("cluster", if cluster { "yes" } else { "no" })
+                .build()
         };
         self.run_query(query)
     }
@@ -208,12 +236,17 @@ struct QueryBuilder<'a> {
 }
 
 impl<'a> QueryBuilder<'a> {
-    fn new(method: &'a str) -> Self {
+    fn new() -> Self {
         QueryBuilder {
             _api_ver: "2.5",
-            _method: method,
+            _method: "",
             _params: Vec::with_capacity(2),
         }
+    }
+
+    fn method(mut self, method: &'a str) -> Self {
+        self._method = method;
+        self
     }
 
     fn param<S: Into<String>>(mut self, key: &'a str, val: S) -> Self {
