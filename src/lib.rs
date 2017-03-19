@@ -132,6 +132,23 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
         self.run_query(query)
     }
 
+    /// Query current weather by passing a ZIP code and an optional country code.
+    pub fn by_zip_code<S: Into<String>>(mut self,
+                                        zip: i32,
+                                        country: Option<S>)
+                                        -> Result<(hyper::client::Response, WeatherInfo)> {
+        let q = match country {
+            None => zip.to_string(),
+            Some(code) => format!("{},{}", zip.to_string(), code.into()),
+        };
+
+        let query = {
+            let b = mem::replace(&mut self._builder, QueryBuilder::new(""));
+            b.param("zip", q).build()
+        };
+        self.run_query(query)
+    }
+
     /// Query current weather by passing geographic coordinates.
     pub fn by_coords(mut self,
                      lat: f32,
@@ -405,6 +422,33 @@ mod tests {
     fn current_by_coords() {
         let hub = WeatherHub::new(hyper::Client::new(), env::var("OWM_API_KEY").unwrap());
         let resp = hub.current().by_coords(43.71, 10.41); // Pisa
+
+        match resp {
+            Err(e) => {
+                println!("{:#?}", e);
+                assert!(false);
+            }
+            Ok((_, info)) => {
+                assert_eq!(Some(10.41),
+                           info.coord
+                               .clone()
+                               .unwrap()
+                               .lon);
+                assert_eq!(Some(43.71),
+                           info.coord
+                               .clone()
+                               .unwrap()
+                               .lat);
+                assert_eq!(Some("Pisa".to_string()), info.name);
+            }
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn current_by_zip() {
+        let hub = WeatherHub::new(hyper::Client::new(), env::var("OWM_API_KEY").unwrap());
+        let resp = hub.current().by_zip_code(56124, Some("IT")); // Pisa
 
         match resp {
             Err(e) => {
