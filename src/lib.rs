@@ -48,6 +48,7 @@ use std::mem;
 use std::io::Read;
 use std::cell::RefCell;
 use std::borrow::BorrowMut;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub enum Error {
@@ -252,7 +253,7 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
 struct QueryBuilder<'a> {
     _api_ver: &'a str,
     _method: &'a str,
-    _params: Vec<(&'a str, String)>,
+    _params: HashMap<&'a str, String>,
 }
 
 impl<'a> QueryBuilder<'a> {
@@ -260,7 +261,7 @@ impl<'a> QueryBuilder<'a> {
         QueryBuilder {
             _api_ver: "2.5",
             _method: "",
-            _params: Vec::with_capacity(2),
+            _params: HashMap::with_capacity(10),
         }
     }
 
@@ -270,7 +271,7 @@ impl<'a> QueryBuilder<'a> {
     }
 
     fn param<S: Into<String>>(mut self, key: &'a str, val: S) -> Self {
-        self._params.push((key, val.into()));
+        self._params.insert(key, val.into());
         self
     }
 
@@ -283,8 +284,8 @@ impl<'a> QueryBuilder<'a> {
         match self._params.len() {
             0 => base,
             _ => {
-                for p in self._params {
-                    ser.append_pair(p.0, p.1.as_str());
+                for (k, v) in self._params {
+                    ser.append_pair(k, v.as_str());
                 }
                 base + "?" + ser.finish().as_str()
             }            
