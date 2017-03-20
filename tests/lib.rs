@@ -135,4 +135,21 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn current_by_circle() {
+        let hub = WeatherHub::new(hyper::Client::new(), env::var("OWM_API_KEY").unwrap());
+        let resp = hub.current().by_circle(43.71, 10.41, 10, false);
+
+        match resp {
+            Err(e) => {
+                println!("{:#?}", e);
+                assert!(false);
+            }
+            Ok((_, info)) => {
+                assert_eq!(Some(10), info.count);
+                assert_eq!(Some("Pisa".to_string()), info.list.clone().unwrap()[0].name);
+            }
+        }
+    }
 }

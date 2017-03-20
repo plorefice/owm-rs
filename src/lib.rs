@@ -180,7 +180,7 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
                      bbox: &BoundingBox,
                      zoom: i32,
                      cluster: bool)
-                     -> Result<(hyper::client::Response, WeatherAggregate)> {
+                     -> Result<(hyper::client::Response, WeatherBoxAggregate)> {
         let q = format!("{},{},{},{},{}",
                         bbox.left,
                         bbox.bottom,
@@ -192,6 +192,26 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
             let b = mem::replace(&mut self._builder, QueryBuilder::new());
             b.method("box/city")
                 .param("bbox", q)
+                .param("cluster", if cluster { "yes" } else { "no" })
+                .build()
+        };
+        self.run_query(query)
+    }
+
+    /// Query current weather for cities laid inside a circle specified by
+    /// center point (lan, lot) and expected number of cities withing.
+    pub fn by_circle(mut self,
+                     lat: f32,
+                     lon: f32,
+                     count: i32,
+                     cluster: bool)
+                     -> Result<(hyper::client::Response, WeatherAggregate)> {
+        let query = {
+            let b = mem::replace(&mut self._builder, QueryBuilder::new());
+            b.method("find")
+                .param("lat", lat.to_string())
+                .param("lon", lon.to_string())
+                .param("cnt", count.to_string())
                 .param("cluster", if cluster { "yes" } else { "no" })
                 .build()
         };
@@ -275,6 +295,19 @@ impl<'a> QueryBuilder<'a> {
 /// Contains the result of an aggregate query.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct WeatherAggregate {
+    /// Search accuracy. Possible values: "accurate", "like".
+    pub message: Option<String>,
+    /// HTTP status code for the request
+    pub cod: Option<i32>,
+    /// Number of items in the list
+    pub count: Option<i32>,
+    /// List of weather info
+    pub list: Option<Vec<WeatherInfo>>,
+}
+
+/// Contains the result of a bounding-box query.
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct WeatherBoxAggregate {
     /// HTTP status code for the request
     pub cod: Option<i32>,
     /// Time elapsed server-side to handle the request
