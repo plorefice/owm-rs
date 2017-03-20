@@ -128,6 +128,13 @@ impl<'a> CurrentWeatherQuery<'a> {
         self
     }
 
+    /// Change language for the query. Note that only the `description` field
+    /// of [Weather](struct.Weather.html) is translated.
+    pub fn lang(mut self, lang: &str) -> Self {
+        self._builder = self._builder.param("lang", lang.to_string());
+        self
+    }
+
     /// Query current weather by passing a city name and an optional country code.
     pub fn by_name(mut self,
                    city: &str,

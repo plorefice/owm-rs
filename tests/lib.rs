@@ -170,4 +170,22 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn current_with_language() {
+        let hub = WeatherHub::new(hyper::Client::new(), &env::var("OWM_API_KEY").unwrap());
+        let no_lang = hub.current().by_id(6542122);
+        let lang = hub.current().lang("IT").by_id(6542122);
+
+        match (no_lang, lang) {
+            (_, Err(e)) | (Err(e), _) => {
+                println!("{:#?}", e);
+                assert!(false);
+            }
+            (Ok((_, i1)), Ok((_, i2))) => {
+                assert_eq!(i1.name, i2.name);
+                assert!(i1.weather.unwrap()[0].description != i2.weather.unwrap()[0].description);
+            }
+        }
+    }
 }
