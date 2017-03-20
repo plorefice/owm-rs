@@ -4,7 +4,7 @@ extern crate owm;
 #[cfg(test)]
 mod tests {
     use std::env;
-    use owm::{WeatherHub, BoundingBox, Units};
+    use owm::{WeatherHub, BoundingBox, Units, FormatResponse};
     use hyper;
 
     #[test]

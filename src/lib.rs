@@ -49,7 +49,6 @@ extern crate serde_json as json;
 extern crate url;
 
 use std::io::Read;
-use std::collections::HashMap;
 
 #[derive(Debug)]
 pub enum Error {
@@ -68,6 +67,65 @@ pub enum Error {
 
 /// A universal result type used as return for all calls.
 pub type Result<T> = std::result::Result<T, Error>;
+
+/// Hides all the complexity related to dealing with URIs.
+mod uri {
+    extern crate url;
+
+    use std::collections::HashMap;
+
+    /// Generic URI builder that handles all URI-related stuff.
+    pub struct UriBuilder<'a> {
+        _api_ver: &'a str,
+        _method: &'a str,
+        _params: HashMap<&'a str, String>,
+    }
+
+    /// Implemented by basically every query builder in the crate.
+    pub trait HasBuilder<'a> {
+        fn builder(&mut self) -> &mut UriBuilder<'a>;
+    }
+
+    impl<'a> UriBuilder<'a> {
+        pub fn new() -> Self {
+            UriBuilder {
+                _api_ver: "2.5",
+                _method: "",
+                _params: HashMap::with_capacity(10),
+            }
+        }
+
+        /// Set the endpoint method.
+        pub fn method(&mut self, method: &'a str) -> &mut Self {
+            self._method = method;
+            self
+        }
+
+        /// Add param to the URI.
+        pub fn param(&mut self, key: &'a str, val: String) -> &mut Self {
+            self._params.insert(key, val);
+            self
+        }
+
+        /// Consumes the builder and returns the corresponding URI.
+        pub fn build(self) -> String {
+            let base = format!("http://api.openweathermap.org/data/{api}/{method}",
+                               api = self._api_ver,
+                               method = self._method);
+            let mut ser = url::form_urlencoded::Serializer::new(String::new());
+
+            match self._params.len() {
+                0 => base,
+                _ => {
+                    for (k, v) in self._params {
+                        ser.append_pair(k, v.as_str());
+                    }
+                    base + "?" + ser.finish().as_str()
+                }            
+            }
+        }
+    }
+}
 
 /// Central hub to access all weather-related facilities.
 pub struct WeatherHub {
@@ -89,7 +147,11 @@ impl<'a> WeatherHub {
     pub fn current(&'a self) -> CurrentWeatherQuery<'a> {
         CurrentWeatherQuery {
             hub: &self,
-            _builder: QueryBuilder::new().param("appid", self.key.clone()),
+            _builder: {
+                let mut ub = uri::UriBuilder::new();
+                ub.param("appid", self.key.clone());
+                ub
+            },
         }
     }
 }
@@ -119,26 +181,38 @@ impl ToString for Units {
     }
 }
 
-/// Query builder for the Current Weather API.
-pub struct CurrentWeatherQuery<'a> {
-    hub: &'a WeatherHub,
-    _builder: QueryBuilder<'a>,
-}
-
-impl<'a> CurrentWeatherQuery<'a> {
+pub trait FormatResponse<'a>
+    where Self: std::marker::Sized + uri::HasBuilder<'a>
+{
     /// Change units format for the query. Default is Standard.
-    pub fn units(mut self, units: Units) -> Self {
-        self._builder = self._builder.param("units", units.to_string());
+    fn units(mut self, units: Units) -> Self {
+        self.builder().param("units", units.to_string());
         self
     }
 
     /// Change language for the query. Note that only the `description` field
     /// of [Weather](struct.Weather.html) is translated.
-    pub fn lang(mut self, lang: &str) -> Self {
-        self._builder = self._builder.param("lang", lang.to_string());
+    fn lang(mut self, lang: &str) -> Self {
+        self.builder().param("lang", lang.to_string());
         self
     }
+}
 
+/// Query builder for the Current Weather API.
+pub struct CurrentWeatherQuery<'a> {
+    hub: &'a WeatherHub,
+    _builder: uri::UriBuilder<'a>,
+}
+
+impl<'a> uri::HasBuilder<'a> for CurrentWeatherQuery<'a> {
+    fn builder(&mut self) -> &mut uri::UriBuilder<'a> {
+        &mut self._builder
+    }
+}
+
+impl<'a> FormatResponse<'a> for CurrentWeatherQuery<'a> {}
+
+impl<'a> CurrentWeatherQuery<'a> {
     /// Query current weather by passing a city name and an optional country code.
     pub fn by_name(mut self,
                    city: &str,
@@ -149,14 +223,14 @@ impl<'a> CurrentWeatherQuery<'a> {
             Some(code) => format!("{},{}", city, code),
         };
 
-        self._builder = self._builder.method("weather").param("q", q);
+        self._builder.method("weather").param("q", q);
         self.run_query()
     }
 
     /// Query current weather by passing a city ID. API responds with exact result.
     /// See http://bulk.openweathermap.org/sample/ for a list of city IDs.
     pub fn by_id(mut self, id: i32) -> Result<(hyper::client::Response, WeatherInfo)> {
-        self._builder = self._builder.method("weather").param("id", id.to_string());
+        self._builder.method("weather").param("id", id.to_string());
         self.run_query()
     }
 
@@ -170,7 +244,7 @@ impl<'a> CurrentWeatherQuery<'a> {
             Some(code) => format!("{},{}", zip, code),
         };
 
-        self._builder = self._builder.method("weather").param("zip", q);
+        self._builder.method("weather").param("zip", q);
         self.run_query()
     }
 
@@ -179,7 +253,7 @@ impl<'a> CurrentWeatherQuery<'a> {
                      lat: f32,
                      lon: f32)
                      -> Result<(hyper::client::Response, WeatherInfo)> {
-        self._builder = self._builder
+        self._builder
             .method("weather")
             .param("lat", lat.to_string())
             .param("lon", lon.to_string());
@@ -201,7 +275,7 @@ impl<'a> CurrentWeatherQuery<'a> {
                         bbox.top,
                         zoom);
 
-        self._builder = self._builder
+        self._builder
             .method("box/city")
             .param("bbox", q)
             .param("cluster", (if cluster { "yes" } else { "no" }).to_string());
@@ -216,7 +290,7 @@ impl<'a> CurrentWeatherQuery<'a> {
                      count: i32,
                      cluster: bool)
                      -> Result<(hyper::client::Response, WeatherAggregate)> {
-        self._builder = self._builder
+        self._builder
             .method("find")
             .param("lat", lat.to_string())
             .param("lon", lon.to_string())
@@ -252,50 +326,6 @@ impl<'a> CurrentWeatherQuery<'a> {
                            Err(err) => Err(Error::JsonDecodeError(json_resp, err)),
                        };
             }
-        }
-    }
-}
-
-/// Generic query builder that handles all URI-related stuff.
-struct QueryBuilder<'a> {
-    _api_ver: &'a str,
-    _method: &'a str,
-    _params: HashMap<&'a str, String>,
-}
-
-impl<'a> QueryBuilder<'a> {
-    fn new() -> Self {
-        QueryBuilder {
-            _api_ver: "2.5",
-            _method: "",
-            _params: HashMap::with_capacity(10),
-        }
-    }
-
-    fn method(mut self, method: &'a str) -> Self {
-        self._method = method;
-        self
-    }
-
-    fn param(mut self, key: &'a str, val: String) -> Self {
-        self._params.insert(key, val);
-        self
-    }
-
-    fn build(self) -> String {
-        let base = format!("http://api.openweathermap.org/data/{api}/{method}",
-                           api = self._api_ver,
-                           method = self._method);
-        let mut ser = url::form_urlencoded::Serializer::new(String::new());
-
-        match self._params.len() {
-            0 => base,
-            _ => {
-                for (k, v) in self._params {
-                    ser.append_pair(k, v.as_str());
-                }
-                base + "?" + ser.finish().as_str()
-            }            
         }
     }
 }
