@@ -104,6 +104,22 @@ pub struct BoundingBox {
     pub right: f32,
 }
 
+/// Units format for this query.
+#[derive(Debug, Serialize, Deserialize)]
+pub enum Units {
+    Metric,
+    Imperial,
+}
+
+impl ToString for Units {
+    fn to_string(&self) -> String {
+        match self {
+            &Units::Metric => "metric".to_string(),
+            &Units::Imperial => "imperial".to_string(),
+        }
+    }
+}
+
 /// Query builder for the Current Weather API.
 pub struct CurrentWeatherQuery<'a, C>
     where C: 'a
@@ -115,6 +131,12 @@ pub struct CurrentWeatherQuery<'a, C>
 impl<'a, C> CurrentWeatherQuery<'a, C>
     where C: BorrowMut<hyper::Client>
 {
+    /// Change units format for the query. Default is Standard.
+    pub fn units(mut self, units: Units) -> Self {
+        self._builder = self._builder.param("units", units.to_string());
+        self
+    }
+
     /// Query current weather by passing a city name and an optional country code.
     pub fn by_name<S: Into<String>>(mut self,
                                     city: S,
