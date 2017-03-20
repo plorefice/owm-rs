@@ -9,7 +9,7 @@ mod tests {
 
     #[test]
     fn current_by_name() {
-        let hub = WeatherHub::new(hyper::Client::new(), env::var("OWM_API_KEY").unwrap());
+        let hub = WeatherHub::new(hyper::Client::new(), &env::var("OWM_API_KEY").unwrap());
         let resp = hub.current().by_name("Pisa", Some("IT"));
 
         match resp {
@@ -35,7 +35,7 @@ mod tests {
 
     #[test]
     fn current_by_id() {
-        let hub = WeatherHub::new(hyper::Client::new(), env::var("OWM_API_KEY").unwrap());
+        let hub = WeatherHub::new(hyper::Client::new(), &env::var("OWM_API_KEY").unwrap());
         let resp = hub.current().by_id(6542122); // Pisa
 
         match resp {
@@ -61,7 +61,7 @@ mod tests {
 
     #[test]
     fn current_by_coords() {
-        let hub = WeatherHub::new(hyper::Client::new(), env::var("OWM_API_KEY").unwrap());
+        let hub = WeatherHub::new(hyper::Client::new(), &env::var("OWM_API_KEY").unwrap());
         let resp = hub.current().by_coords(43.71, 10.41); // Pisa
 
         match resp {
@@ -88,7 +88,7 @@ mod tests {
     #[test]
     #[ignore]
     fn current_by_zip() {
-        let hub = WeatherHub::new(hyper::Client::new(), env::var("OWM_API_KEY").unwrap());
+        let hub = WeatherHub::new(hyper::Client::new(), &env::var("OWM_API_KEY").unwrap());
         let resp = hub.current().by_zip_code(56124, Some("IT")); // Pisa
 
         match resp {
@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn current_by_bounds() {
-        let hub = WeatherHub::new(hyper::Client::new(), env::var("OWM_API_KEY").unwrap());
+        let hub = WeatherHub::new(hyper::Client::new(), &env::var("OWM_API_KEY").unwrap());
         let resp = hub.current().by_bounds(&BoundingBox {
                                                 top: 43.73,
                                                 left: 10.38,
@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn current_by_circle() {
-        let hub = WeatherHub::new(hyper::Client::new(), env::var("OWM_API_KEY").unwrap());
+        let hub = WeatherHub::new(hyper::Client::new(), &env::var("OWM_API_KEY").unwrap());
         let resp = hub.current().by_circle(43.71, 10.41, 10, false);
 
         match resp {
@@ -155,7 +155,7 @@ mod tests {
 
     #[test]
     fn current_with_units() {
-        let hub = WeatherHub::new(hyper::Client::new(), env::var("OWM_API_KEY").unwrap());
+        let hub = WeatherHub::new(hyper::Client::new(), &env::var("OWM_API_KEY").unwrap());
         let no_units = hub.current().by_id(6542122);
         let units = hub.current().units(Units::Metric).by_id(6542122);
 

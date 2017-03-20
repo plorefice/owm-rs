@@ -21,7 +21,7 @@
 //! use owm::{WeatherHub, Error};
 //!
 //! # #[test] fn eval() {
-//! let hub = WeatherHub::new(hyper::Client::new(), "YOUR_API_KEY".to_string());
+//! let hub = WeatherHub::new(hyper::Client::new(), "YOUR_API_KEY");
 //! let res = hub.current().by_name("London", Some("UK"));
 //!
 //! match res {
@@ -74,10 +74,10 @@ pub struct WeatherHub {
 impl<'a> WeatherHub {
     /// Creates a new WeatherHub which will use the provided client to perform
     /// its requests. It also requires an OWM API key.
-    pub fn new<S: Into<String>>(client: hyper::Client, key: S) -> WeatherHub {
+    pub fn new(client: hyper::Client, key: &str) -> WeatherHub {
         WeatherHub {
             client: client,
-            key: key.into(),
+            key: key.to_string(),
         }
     }
 
@@ -129,13 +129,13 @@ impl<'a> CurrentWeatherQuery<'a> {
     }
 
     /// Query current weather by passing a city name and an optional country code.
-    pub fn by_name<S: Into<String>>(mut self,
-                                    city: S,
-                                    country: Option<S>)
-                                    -> Result<(hyper::client::Response, WeatherInfo)> {
+    pub fn by_name(mut self,
+                   city: &str,
+                   country: Option<&str>)
+                   -> Result<(hyper::client::Response, WeatherInfo)> {
         let q = match country {
-            None => city.into(),
-            Some(code) => format!("{},{}", city.into(), code.into()),
+            None => city.to_string(),
+            Some(code) => format!("{},{}", city, code),
         };
 
         self._builder = self._builder.method("weather").param("q", q);
@@ -150,13 +150,13 @@ impl<'a> CurrentWeatherQuery<'a> {
     }
 
     /// Query current weather by passing a ZIP code and an optional country code.
-    pub fn by_zip_code<S: Into<String>>(mut self,
-                                        zip: i32,
-                                        country: Option<S>)
-                                        -> Result<(hyper::client::Response, WeatherInfo)> {
+    pub fn by_zip_code(mut self,
+                       zip: i32,
+                       country: Option<&str>)
+                       -> Result<(hyper::client::Response, WeatherInfo)> {
         let q = match country {
             None => zip.to_string(),
-            Some(code) => format!("{},{}", zip.to_string(), code.into()),
+            Some(code) => format!("{},{}", zip, code),
         };
 
         self._builder = self._builder.method("weather").param("zip", q);
@@ -193,7 +193,7 @@ impl<'a> CurrentWeatherQuery<'a> {
         self._builder = self._builder
             .method("box/city")
             .param("bbox", q)
-            .param("cluster", if cluster { "yes" } else { "no" });
+            .param("cluster", (if cluster { "yes" } else { "no" }).to_string());
         self.run_query()
     }
 
@@ -210,7 +210,7 @@ impl<'a> CurrentWeatherQuery<'a> {
             .param("lat", lat.to_string())
             .param("lon", lon.to_string())
             .param("cnt", count.to_string())
-            .param("cluster", if cluster { "yes" } else { "no" });
+            .param("cluster", (if cluster { "yes" } else { "no" }).to_string());
         self.run_query()
     }
 
@@ -266,8 +266,8 @@ impl<'a> QueryBuilder<'a> {
         self
     }
 
-    fn param<S: Into<String>>(mut self, key: &'a str, val: S) -> Self {
-        self._params.insert(key, val.into());
+    fn param(mut self, key: &'a str, val: String) -> Self {
+        self._params.insert(key, val);
         self
     }
 
