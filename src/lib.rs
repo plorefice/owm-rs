@@ -8,9 +8,13 @@
 //!
 //! Right now, the crate supports:
 //!
-//! * Querying the current weather via [CurrentWeatherQuery](struct.CurrentWeatherQuery.html)
+//! * [Querying the current weather](struct.CurrentWeatherQuery.html)
 //!  * By city name
 //!  * By city ID
+//!  * By ZIP code
+//!  * By coordinates (point, bounding box and bounding circle)
+//! * Multi-language queries
+//! * Standard, metric and imperial units
 //!
 //! # Example
 //!
