@@ -398,6 +398,8 @@ pub struct Wind {
     pub speed: Option<f32>,
     /// Wind direction [deg] (meteorological)
     pub deg: Option<i32>,
+    /// Wind gust. Same units as speed.AsMut
+    pub gust: Option<f32>,
 }
 
 /// Contains cloud-related information.
