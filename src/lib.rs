@@ -44,10 +44,7 @@ extern crate serde;
 extern crate serde_json as json;
 extern crate url;
 
-use std::mem;
 use std::io::Read;
-use std::cell::RefCell;
-use std::borrow::BorrowMut;
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -69,25 +66,23 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// Central hub to access all weather-related facilities.
-pub struct WeatherHub<C> {
-    client: RefCell<C>,
+pub struct WeatherHub {
+    client: hyper::Client,
     key: String,
 }
 
-impl<'a, C> WeatherHub<C>
-    where C: BorrowMut<hyper::Client>
-{
+impl<'a> WeatherHub {
     /// Creates a new WeatherHub which will use the provided client to perform
     /// its requests. It also requires an OWM API key.
-    pub fn new<S: Into<String>>(client: C, key: S) -> WeatherHub<C> {
+    pub fn new<S: Into<String>>(client: hyper::Client, key: S) -> WeatherHub {
         WeatherHub {
-            client: RefCell::new(client),
+            client: client,
             key: key.into(),
         }
     }
 
     /// Provides access to the current-weather facilities.
-    pub fn current(&'a self) -> CurrentWeatherQuery<'a, C> {
+    pub fn current(&'a self) -> CurrentWeatherQuery<'a> {
         CurrentWeatherQuery {
             hub: &self,
             _builder: QueryBuilder::new().param("appid", self.key.clone()),
@@ -121,16 +116,12 @@ impl ToString for Units {
 }
 
 /// Query builder for the Current Weather API.
-pub struct CurrentWeatherQuery<'a, C>
-    where C: 'a
-{
-    hub: &'a WeatherHub<C>,
+pub struct CurrentWeatherQuery<'a> {
+    hub: &'a WeatherHub,
     _builder: QueryBuilder<'a>,
 }
 
-impl<'a, C> CurrentWeatherQuery<'a, C>
-    where C: BorrowMut<hyper::Client>
-{
+impl<'a> CurrentWeatherQuery<'a> {
     /// Change units format for the query. Default is Standard.
     pub fn units(mut self, units: Units) -> Self {
         self._builder = self._builder.param("units", units.to_string());
@@ -147,21 +138,15 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
             Some(code) => format!("{},{}", city.into(), code.into()),
         };
 
-        let query = {
-            let b = mem::replace(&mut self._builder, QueryBuilder::new());
-            b.method("weather").param("q", q).build()
-        };
-        self.run_query(query)
+        self._builder = self._builder.method("weather").param("q", q);
+        self.run_query()
     }
 
     /// Query current weather by passing a city ID. API responds with exact result.
     /// See http://bulk.openweathermap.org/sample/ for a list of city IDs.
     pub fn by_id(mut self, id: i32) -> Result<(hyper::client::Response, WeatherInfo)> {
-        let query = {
-            let b = mem::replace(&mut self._builder, QueryBuilder::new());
-            b.method("weather").param("id", id.to_string()).build()
-        };
-        self.run_query(query)
+        self._builder = self._builder.method("weather").param("id", id.to_string());
+        self.run_query()
     }
 
     /// Query current weather by passing a ZIP code and an optional country code.
@@ -174,11 +159,8 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
             Some(code) => format!("{},{}", zip.to_string(), code.into()),
         };
 
-        let query = {
-            let b = mem::replace(&mut self._builder, QueryBuilder::new());
-            b.method("weather").param("zip", q).build()
-        };
-        self.run_query(query)
+        self._builder = self._builder.method("weather").param("zip", q);
+        self.run_query()
     }
 
     /// Query current weather by passing geographic coordinates.
@@ -186,14 +168,11 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
                      lat: f32,
                      lon: f32)
                      -> Result<(hyper::client::Response, WeatherInfo)> {
-        let query = {
-            let b = mem::replace(&mut self._builder, QueryBuilder::new());
-            b.method("weather")
-                .param("lat", lat.to_string())
-                .param("lon", lon.to_string())
-                .build()
-        };
-        self.run_query(query)
+        self._builder = self._builder
+            .method("weather")
+            .param("lat", lat.to_string())
+            .param("lon", lon.to_string());
+        self.run_query()
     }
 
     /// Query current weather for cities within the defined rectangle specified
@@ -211,14 +190,11 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
                         bbox.top,
                         zoom);
 
-        let query = {
-            let b = mem::replace(&mut self._builder, QueryBuilder::new());
-            b.method("box/city")
-                .param("bbox", q)
-                .param("cluster", if cluster { "yes" } else { "no" })
-                .build()
-        };
-        self.run_query(query)
+        self._builder = self._builder
+            .method("box/city")
+            .param("bbox", q)
+            .param("cluster", if cluster { "yes" } else { "no" });
+        self.run_query()
     }
 
     /// Query current weather for cities laid inside a circle specified by
@@ -229,24 +205,22 @@ impl<'a, C> CurrentWeatherQuery<'a, C>
                      count: i32,
                      cluster: bool)
                      -> Result<(hyper::client::Response, WeatherAggregate)> {
-        let query = {
-            let b = mem::replace(&mut self._builder, QueryBuilder::new());
-            b.method("find")
-                .param("lat", lat.to_string())
-                .param("lon", lon.to_string())
-                .param("cnt", count.to_string())
-                .param("cluster", if cluster { "yes" } else { "no" })
-                .build()
-        };
-        self.run_query(query)
+        self._builder = self._builder
+            .method("find")
+            .param("lat", lat.to_string())
+            .param("lon", lon.to_string())
+            .param("cnt", count.to_string())
+            .param("cluster", if cluster { "yes" } else { "no" });
+        self.run_query()
     }
 
     /// Does the actual API call, parses the response and handles any errors.
-    fn run_query<D>(&self, url: String) -> Result<(hyper::client::Response, D)>
+    fn run_query<D>(self) -> Result<(hyper::client::Response, D)>
         where D: serde::Deserialize
     {
-        let req_result = ((*self.hub.client.borrow_mut()).borrow_mut())
-            .request(hyper::method::Method::Get, &url)
+        let req_result = self.hub
+            .client
+            .request(hyper::method::Method::Get, &self._builder.build())
             .send();
 
         match req_result {
